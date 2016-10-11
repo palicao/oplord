@@ -20,18 +20,22 @@ func main() {
 		Timeout: -1, // See http://godoc.org/gopkg.in/mgo.v2#Query.Tail
 	}
 
-	logs := make(chan mgotail.Oplog)
-	done := make(chan bool)
+	logs := make(chan mgotail.Oplog, 1)
+	done := make(chan bool, 1)
 	go q.Tail(logs, done)
-	go func() {
+	go func(done chan bool) {
 		for log := range logs {
 			for _, watcher := range oplord.Watchers {
 				if watcher.Matcher(log) {
-					watcher.Action(log)
-					go oplord.SaveTime(session, log.Timestamp)
+					if err := watcher.Action(log); err != nil {
+						done <- true
+					}
+					if err := oplord.SaveTime(session, log.Timestamp); err != nil {
+						done <- true
+					}
 				}
 			}
 		}
-	}()
+	}(done)
 	<-done
 }

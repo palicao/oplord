@@ -36,7 +36,7 @@ func SimplePostActionFactory(url string) OplogAction {
 		if err != nil {
 			return err
 		}
-		http.Post(url, "application/json", bytes.NewBuffer(b))
+		go http.Post(url, "application/json", bytes.NewBuffer(b))
 		return nil
 	}
 }
